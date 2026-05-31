@@ -1,4 +1,4 @@
-# Image Annotator
+"# Image Annotator
 
 A Python application that monitors a directory for new images and prompts you to add annotations. Annotations are stored in JSON sidecar files alongside the images.
 
@@ -20,6 +20,15 @@ A Python application that monitors a directory for new images and prompts you to
 ## Installation
 
 ```bash
+# Create a virtual environment (recommended)
+python3 -m venv venv
+
+# Activate the virtual environment
+# On macOS/Linux:
+source venv/bin/activate
+# On Windows:
+# venv\Scripts\activate
+
 # Install dependencies
 pip install -r requirements.txt
 
@@ -28,6 +37,9 @@ python -m image_annotator
 
 # Or with a specific directory
 python -m image_annotator /path/to/photos
+
+# When done, deactivate the virtual environment
+deactivate
 ```
 
 ## Usage
@@ -108,4 +120,3 @@ MIT License
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
-
