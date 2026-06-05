@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memory Annotations | Slide Film & RAW Annotator</title>
+    <meta name="description" content="A premium desktop assistant to catalog, tag, and annotate scanned slide film and RAW images. Supports hot folders.">
+    <!-- Google Fonts: Outfit for titles, Inter for UI text -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <header class="app-header">
+                <div class="logo">
+                    <span class="logo-icon"><i class="fa-solid fa-photo-film"></i></span>
+                    <h1 class="logo-text">Memory Annotations</h1>
+                </div>
+            </header>
+
+            <!-- Config Form -->
+            <section class="config-section card">
+                <h2><i class="fa-solid fa-sliders"></i> Configuration</h2>
+                <div class="form-group">
+                    <label for="dir-input">Target Directory</label>
+                    <div class="dir-input-wrapper">
+                        <input type="text" id="dir-input" placeholder="e.g. C:\Users\name\Pictures\Slides" spellcheck="false">
+                        <button id="btn-save-config" title="Save configuration"><i class="fa-solid fa-check"></i></button>
+                    </div>
+                    <p class="help-text">Folder containing JPG/JPEG or CR3 files.</p>
+                </div>
+
+                <div class="form-group">
+                    <label>Annotation Mode</label>
+                    <div class="mode-toggle-group">
+                        <button id="mode-scan" class="mode-btn active" data-mode="scan">
+                            <i class="fa-solid fa-images"></i> Folder Scan
+                        </button>
+                        <button id="mode-hotfolder" class="mode-btn" data-mode="hotfolder">
+                            <i class="fa-solid fa-fire"></i> Hot Folder
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Image Browser -->
+            <section class="browser-section card">
+                <div class="section-header">
+                    <h2><i class="fa-solid fa-folder-open"></i> Images</h2>
+                    <span id="image-count" class="badge">0 files</span>
+                </div>
+                <div class="search-box">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="search-input" placeholder="Filter files..." spellcheck="false">
+                </div>
+                <div id="image-list" class="image-list-container">
+                    <div class="empty-state">
+                        <i class="fa-solid fa-folder-closed"></i>
+                        <p>Configure a directory to begin</p>
+                    </div>
+                </div>
+            </section>
+        </aside>
+
+        <!-- Main Viewport -->
+        <main class="main-viewport">
+            <div id="image-viewer-card" class="viewer-card">
+                <div id="viewer-placeholder" class="viewer-placeholder">
+                    <i class="fa-solid fa-mountain-sun"></i>
+                    <p class="placeholder-main">No Image Selected</p>
+                    <p class="placeholder-sub">Select an image from the sidebar, or configure a folder to scan.</p>
+                </div>
+                <div id="image-loader" class="image-loader hidden">
+                    <div class="spinner"></div>
+                    <p>Loading image preview...</p>
+                </div>
+                <img id="active-image" class="active-image hidden" alt="Active Annotation Subject">
+                
+                <div id="image-overlay-info" class="image-overlay-info hidden">
+                    <span id="overlay-filename">image.jpg</span>
+                    <span id="overlay-resolution" class="badge">JPG</span>
+                </div>
+            </div>
+
+            <!-- Shortcut overlay guide -->
+            <footer class="shortcut-bar">
+                <div class="shortcut-item"><kbd><i class="fa-solid fa-arrow-left"></i></kbd> Previous</div>
+                <div class="shortcut-item"><kbd><i class="fa-solid fa-arrow-right"></i></kbd> Next</div>
+                <div class="shortcut-item"><kbd>Ctrl</kbd> + <kbd>S</kbd> Save</div>
+                <div class="shortcut-item"><kbd>Esc</kbd> Clear focus</div>
+            </footer>
+        </main>
+
+        <!-- Annotation Panel -->
+        <section class="annotation-panel">
+            <div class="annotation-header card">
+                <h2><i class="fa-solid fa-pen-to-square"></i> Annotate Slide</h2>
+                <span id="status-indicator" class="status-indicator pending">
+                    <i class="fa-solid fa-circle-dot"></i> Unsaved
+                </span>
+            </div>
+
+            <form id="annotation-form" class="annotation-form-card card" disabled>
+                <!-- Subject -->
+                <div class="form-group">
+                    <label for="input-subject"><i class="fa-solid fa-tag"></i> Subject / Title</label>
+                    <input type="text" id="input-subject" placeholder="What is this slide depicting?" autocomplete="off" disabled>
+                </div>
+
+                <!-- Date -->
+                <div class="form-group">
+                    <label for="input-date"><i class="fa-solid fa-calendar-days"></i> Approximate Date</label>
+                    <input type="text" id="input-date" placeholder="e.g. Summer 1985, 1992-06-15" autocomplete="off" disabled>
+                </div>
+
+                <!-- Location -->
+                <div class="form-group">
+                    <label for="input-location"><i class="fa-solid fa-location-dot"></i> Location</label>
+                    <input type="text" id="input-location" placeholder="Where was this photo taken?" autocomplete="off" disabled>
+                </div>
+
+                <!-- Description -->
+                <div class="form-group">
+                    <label for="input-description"><i class="fa-solid fa-align-left"></i> Description</label>
+                    <textarea id="input-description" rows="4" placeholder="Additional details, stories, or family notes..." disabled></textarea>
+                </div>
+
+                <!-- Tags -->
+                <div class="form-group">
+                    <label for="tag-input-field"><i class="fa-solid fa-hashtag"></i> Tags</label>
+                    <div class="tag-manager" id="tag-manager-box">
+                        <div id="tags-container" class="tags-container"></div>
+                        <input type="text" id="tag-input-field" placeholder="Add tag + press Enter" autocomplete="off" disabled>
+                    </div>
+                </div>
+
+                <!-- Custom Fields -->
+                <div class="form-group custom-fields-section">
+                    <div class="custom-fields-header">
+                        <label><i class="fa-solid fa-gears"></i> Custom Fields</label>
+                        <button type="button" id="btn-add-custom-field" class="btn-text" disabled>
+                            <i class="fa-solid fa-plus"></i> Add
+                        </button>
+                    </div>
+                    <div id="custom-fields-container" class="custom-fields-container"></div>
+                </div>
+
+                <!-- Form Controls -->
+                <div class="form-actions">
+                    <button type="button" id="btn-reset" class="btn btn-secondary" disabled>
+                        <i class="fa-solid fa-rotate-left"></i> Reset
+                    </button>
+                    <button type="submit" id="btn-save" class="btn btn-primary" disabled>
+                        <i class="fa-solid fa-floppy-disk"></i> Save Annotation
+                    </button>
+                </div>
+            </form>
+        </section>
+    </div>
+
+    <!-- Notification Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Custom Field Modal (Simple prompt logic inside JS for cleaner code, or simple structure) -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

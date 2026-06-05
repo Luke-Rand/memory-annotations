@@ -1,122 +1,78 @@
-"# Image Annotator
+# Memory Annotations
 
-A Python application that monitors a directory for new images and prompts you to add annotations. Annotations are stored in JSON sidecar files alongside the images.
+A premium desktop-assistant and local web workspace designed to speed up cataloging, tagging, and annotating scanned slide film and RAW images (such as Canon `.cr3`). 
 
-## Features
+It serves a beautiful, high-fidelity dark-mode user interface locally in the browser, saving all annotations to clean, interoperable JSON sidecar files directly next to your images.
 
-- 🔍 Automatically detects new images in a watched directory
-- 📝 Interactive prompts for adding annotations (people, location, date, notes, categories)
-- 💾 Stores annotations in JSON sidecar files (`.json` alongside images)
-- ✏️ Edit existing annotations
-- 🔎 Search and filter annotations
-- 📊 Summary and statistics
+---
 
-## Requirements
+## Key Features
 
-- Python 3.7+
-- watchdog (for file system monitoring)
-- Pillow (optional, for image metadata)
+- **Split Workspace Layout**: Easy-to-use 3-panel UI featuring directory selection, image browser (with filter search), dynamic image viewport stage, and detail metadata panel.
+- **Canon RAW (`.cr3`) Support**: Handles Canon raw files directly. It extracts embedded high-resolution JPEG previews instantly, or falls back to full RAW postprocessing (demosaicing) using `rawpy`.
+- **Intelligent Preview Cache**: Renders and caches RAW preview conversions in a local `.preview_cache/` directory to ensure subsequent image loads are virtually instantaneous.
+- **JSON Sidecar Standard**: Saves metadata (Subject, Date, Location, Description, custom tags, and custom key-value pairs) directly next to the original files as `<image_name>.json` to ensure your data stays permanently linked to your physical scans.
+- **Modes**:
+  - **Folder Scan**: Step sequentially through an existing directory of files one-by-one.
+  - **Hot Folder**: Monitors a folder using `watchdog`. When a new slide copy is completed, a glowing toast notification pops up. Click it to immediately jump and annotate.
+- **Keyboard Shortcuts**: Designed for fast typing flows:
+  - <kbd>←</kbd> and <kbd>→</kbd> Arrow keys: Navigate to the previous or next image.
+  - <kbd>Ctrl</kbd> + <kbd>S</kbd>: Save annotations.
+  - <kbd>Esc</kbd>: Blur current text fields to resume arrow key navigation.
 
-## Installation
+---
 
+## Getting Started
+
+### Prerequisites
+
+- **Python**: Python 3.8 or higher.
+- **Package Manager**: `pip` (included with Python installation).
+
+*Note: For RAW (.cr3) file decoding, the app uses `rawpy` and `numpy` (already installed in the default system environment).*
+
+### Installation
+
+1. Clone or download the repository into your workspace directory.
+2. Install the necessary packages:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+### Running the App
+
+Start the application by running the following command in your terminal:
 ```bash
-# Create a virtual environment (recommended)
-python3 -m venv venv
+python app.py
+```
+This starts the Flask server locally and automatically opens your system default browser to:
+[**`http://localhost:5000/`**](http://localhost:5000/)
 
-# Activate the virtual environment
-# On macOS/Linux:
-source venv/bin/activate
-# On Windows:
-# venv\Scripts\activate
+---
 
-# Install dependencies
-pip install -r requirements.txt
+## Directory Structure
 
-# Run the application
-python -m image_annotator
-
-# Or with a specific directory
-python -m image_annotator /path/to/photos
-
-# When done, deactivate the virtual environment
-deactivate
+```text
+memory-annotations/
+├── templates/
+│   └── index.html        # Glassmorphic UI Skeleton
+├── static/
+│   ├── css/
+│   │   └── style.css     # Dark Mode Theme Stylesheet
+│   └── js/
+│       └── app.js        # Form Controller and Polling Logic
+├── app.py                # Flask Backend & Watcher Server
+├── verify_backend.py     # Automated unittest test suite
+├── requirements.txt      # Python Package Dependencies
+└── README.md             # Project Guide
 ```
 
-## Usage
+---
 
-### Basic Usage
+## Running Tests
 
+To verify that the API routes and sidecar serialization logic are operating correctly:
 ```bash
-# Watch the current directory
-python -m image_annotator
-
-# Watch a specific directory
-python -m image_annotator /path/to/photos
+python verify_backend.py
 ```
-
-### Configuration
-
-Create a `config.json` file in the same directory as the application:
-
-```json
-{
-  "watch_directory": "/path/to/photos",
-  "supported_extensions": [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"],
-  "annotation_suffix": ".json",
-  "notify_on_new_image": true,
-  "log_level": "INFO"
-}
-```
-
-## Annotation Format
-
-Annotations are stored as JSON files with the same name as the image plus a `.json` extension. For example, `photo.jpg` would have a sidecar file `photo.jpg.json`.
-
-```json
-{
-  "filename": "photo.jpg",
-  "people": ["Alice", "Bob"],
-  "location": "Paris, France",
-  "date_approximate": "June 2023",
-  "notes": "Summer vacation",
-  "categories": ["travel", "family"],
-  "annotated_at": "2024-01-15T10:30:00"
-}
-```
-
-## Project Structure
-
-```
-image_annotator/
-├── __init__.py          # Package initialization
-├── __main__.py          # Entry point
-├── main.py              # Main application logic
-├── config.py            # Configuration management
-├── storage.py           # Annotation storage operations
-├── prompts.py           # User interaction prompts
-├── watcher.py           # File system watcher
-├── utils.py             # Utility functions
-└── __pycache__/         # Python cache
-requirements.txt         # Dependencies
-README.md               # This file
-```
-
-## Development
-
-### Running Tests
-
-```bash
-python -m pytest
-```
-
-### Code Style
-
-This project follows PEP 8 style guidelines.
-
-## License
-
-MIT License
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
+All unit tests should complete successfully in a fraction of a second.
