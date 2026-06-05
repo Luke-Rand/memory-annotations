@@ -8,6 +8,8 @@ let appConfig = {
 let imagesList = [];
 let activeImageIndex = -1;
 let currentTags = [];
+let currentPeople = [];
+let allPeopleSuggestions = [];
 let aiFeatures = [];
 let isFormDirty = false;
 let hotFolderLastId = 0;
@@ -37,11 +39,15 @@ const inputLocation = document.getElementById('input-location');
 const inputDescription = document.getElementById('input-description');
 const tagInputField = document.getElementById('tag-input-field');
 const tagsContainer = document.getElementById('tags-container');
+const peopleInputField = document.getElementById('people-input-field');
+const peopleContainer = document.getElementById('people-container');
+const peopleAutocompleteList = document.getElementById('people-autocomplete-list');
 const customFieldsContainer = document.getElementById('custom-fields-container');
 const btnAddCustomField = document.getElementById('btn-add-custom-field');
 const btnReset = document.getElementById('btn-reset');
 const btnSave = document.getElementById('btn-save');
 const toastContainer = document.getElementById('toast-container');
+
 
 // ML Elements
 const aiFeaturesBox = document.getElementById('ai-features-box');
@@ -127,6 +133,7 @@ async function loadConfig() {
         
         if (appConfig.target_directory) {
             loadImages();
+            fetchPeopleSuggestions();
             if (appConfig.mode === 'hotfolder') {
                 startHotFolderPolling();
             }
@@ -150,6 +157,7 @@ async function saveConfig(directory, mode) {
             appConfig = data.config;
             showToast('Config Saved', 'Directory and mode settings updated.', 'success');
             loadImages();
+            fetchPeopleSuggestions();
             
             if (appConfig.mode === 'hotfolder') {
                 startHotFolderPolling();
@@ -161,6 +169,18 @@ async function saveConfig(directory, mode) {
         }
     } catch (err) {
         showToast('Connection Error', 'Failed to communicate with local server.', 'error');
+    }
+}
+
+// Fetch unique names for autocomplete suggestions
+async function fetchPeopleSuggestions() {
+    try {
+        const res = await fetch('/api/people');
+        if (res.ok) {
+            allPeopleSuggestions = await res.json();
+        }
+    } catch (err) {
+        console.error('Failed to load people suggestions:', err);
     }
 }
 
@@ -361,6 +381,10 @@ function populateForm(meta, isAnnotated) {
     currentTags = meta.tags || [];
     renderTags();
     
+    // Set People
+    currentPeople = meta.people || [];
+    renderPeople();
+    
     // Set Custom Fields
     customFieldsContainer.innerHTML = '';
     const custom = meta.custom || {};
@@ -383,6 +407,7 @@ function enableForm() {
     inputLocation.disabled = false;
     inputDescription.disabled = false;
     tagInputField.disabled = false;
+    peopleInputField.disabled = false;
     btnAddCustomField.disabled = false;
     btnReset.disabled = false;
     btnSave.disabled = false;
@@ -402,6 +427,7 @@ function disableForm() {
     inputLocation.disabled = true;
     inputDescription.disabled = true;
     tagInputField.disabled = true;
+    peopleInputField.disabled = true;
     btnAddCustomField.disabled = true;
     btnReset.disabled = true;
     btnSave.disabled = true;
@@ -414,6 +440,10 @@ function disableForm() {
     inputLocation.value = '';
     inputDescription.value = '';
     tagsContainer.innerHTML = '';
+    peopleContainer.innerHTML = '';
+    peopleInputField.value = '';
+    peopleAutocompleteList.classList.add('hidden');
+    currentPeople = [];
     customFieldsContainer.innerHTML = '';
     aiFeaturesChips.innerHTML = '<span class="ai-placeholder-text">Click below to analyze image features.</span>';
     aiFeatures = [];
@@ -490,6 +520,25 @@ function renderTags() {
     });
 }
 
+// People chips rendering
+function renderPeople() {
+    peopleContainer.innerHTML = '';
+    currentPeople.forEach((person, idx) => {
+        const chip = document.createElement('span');
+        chip.className = 'people-chip';
+        chip.innerHTML = `${person} <i class="fa-solid fa-xmark" data-index="${idx}"></i>`;
+        
+        chip.querySelector('i').addEventListener('click', (e) => {
+            const removeIdx = parseInt(e.target.dataset.index);
+            currentPeople.splice(removeIdx, 1);
+            renderPeople();
+            setFormDirtyState(true);
+        });
+        
+        peopleContainer.appendChild(chip);
+    });
+}
+
 // Custom Key-Value attributes
 function addCustomFieldRow(key = '', value = '') {
     const row = document.createElement('div');
@@ -536,6 +585,7 @@ async function saveAnnotations() {
         location: inputLocation.value,
         description: inputDescription.value,
         tags: currentTags,
+        people: currentPeople,
         custom: custom,
         ai_features: aiFeatures
     };
@@ -555,6 +605,9 @@ async function saveAnnotations() {
             // Mark as annotated in local list and trigger list refresh
             imagesList[activeImageIndex].annotated = true;
             renderImageList();
+            
+            // Refresh people autocomplete suggestions since a new name might have been saved
+            fetchPeopleSuggestions();
         } else {
             const data = await res.json();
             showToast('Save Error', data.error || 'Failed to save metadata.', 'error');
@@ -613,6 +666,111 @@ function setupEventListeners() {
             tagInputField.value = '';
         }
     });
+    
+    // People Manager Input & Autocomplete Events
+    let currentFocusIndex = -1;
+    
+    peopleInputField.addEventListener('input', () => {
+        const val = peopleInputField.value.trim();
+        closeAutocompleteList();
+        if (!val) return;
+        
+        currentFocusIndex = -1;
+        
+        // Filter suggestions that contain input string and are not already added
+        const matches = allPeopleSuggestions.filter(p => 
+            p.toLowerCase().includes(val.toLowerCase()) && !currentPeople.includes(p)
+        );
+        
+        if (matches.length === 0) return;
+        
+        peopleAutocompleteList.innerHTML = '';
+        peopleAutocompleteList.classList.remove('hidden');
+        
+        matches.forEach((match) => {
+            const item = document.createElement('div');
+            item.className = 'autocomplete-item';
+            
+            // Highlight matching letters
+            const startIdx = match.toLowerCase().indexOf(val.toLowerCase());
+            const before = match.substring(0, startIdx);
+            const matching = match.substring(startIdx, startIdx + val.length);
+            const after = match.substring(startIdx + val.length);
+            
+            item.innerHTML = `${before}<strong>${matching}</strong>${after}`;
+            item.dataset.value = match;
+            
+            item.addEventListener('click', () => {
+                addPerson(match);
+                closeAutocompleteList();
+            });
+            
+            peopleAutocompleteList.appendChild(item);
+        });
+    });
+    
+    peopleInputField.addEventListener('keydown', (e) => {
+        const items = peopleAutocompleteList.querySelectorAll('.autocomplete-item');
+        
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            currentFocusIndex++;
+            setActiveSuggestion(items);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            currentFocusIndex--;
+            setActiveSuggestion(items);
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (currentFocusIndex > -1 && items[currentFocusIndex]) {
+                addPerson(items[currentFocusIndex].dataset.value);
+                closeAutocompleteList();
+            } else {
+                const val = peopleInputField.value.trim();
+                if (val) {
+                    addPerson(val);
+                    closeAutocompleteList();
+                }
+            }
+        } else if (e.key === 'Escape') {
+            closeAutocompleteList();
+        }
+    });
+    
+    // Close list when clicking outside
+    document.addEventListener('click', (e) => {
+        if (e.target !== peopleInputField) {
+            closeAutocompleteList();
+        }
+    });
+    
+    function addPerson(name) {
+        const cleaned = name.trim();
+        if (cleaned && !currentPeople.includes(cleaned)) {
+            currentPeople.push(cleaned);
+            renderPeople();
+            setFormDirtyState(true);
+        }
+        peopleInputField.value = '';
+    }
+    
+    function closeAutocompleteList() {
+        peopleAutocompleteList.innerHTML = '';
+        peopleAutocompleteList.classList.add('hidden');
+        currentFocusIndex = -1;
+    }
+    
+    function setActiveSuggestion(items) {
+        if (!items || items.length === 0) return;
+        
+        items.forEach(item => item.classList.remove('active'));
+        
+        if (currentFocusIndex >= items.length) currentFocusIndex = 0;
+        if (currentFocusIndex < 0) currentFocusIndex = items.length - 1;
+        
+        items[currentFocusIndex].classList.add('active');
+        items[currentFocusIndex].scrollIntoView({ block: 'nearest' });
+    }
     
     // Custom Fields
     btnAddCustomField.addEventListener('click', () => {

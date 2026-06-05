@@ -212,5 +212,47 @@ class BackendTestCase(unittest.TestCase):
         self.assertEqual(data['ai_features'][0]['feature'], 'mountain')
         self.assertEqual(data['ai_features'][0]['confidence'], 94.2)
 
+    def test_people_autocomplete_and_serialization(self):
+        """Test that people field is serialized correctly in sidecar, and api_people aggregates unique sorted names."""
+        # 1. Write annotations with people for slide_01.jpg
+        payload_1 = {
+            'subject': 'Family Reunion',
+            'date': '1990',
+            'location': 'Grandmas House',
+            'description': 'Family group photo',
+            'tags': ['reunion'],
+            'people': ['Alice Smith', 'Bob Jones'],
+            'custom': {}
+        }
+        response = self.client.post('/api/annotation?path=slide_01.jpg', json=payload_1)
+        self.assertEqual(response.status_code, 200)
+
+        # 2. Write annotations with people for slide_02.cr3 (sharing base name slide_02.json)
+        payload_2 = {
+            'subject': 'Hiking trip',
+            'date': '1995',
+            'location': 'Yosemite',
+            'description': 'Alice and Charlie hiking',
+            'tags': ['hiking'],
+            'people': ['Charlie Brown', 'Alice Smith'],
+            'custom': {}
+        }
+        response = self.client.post('/api/annotation?path=slide_02.cr3', json=payload_2)
+        self.assertEqual(response.status_code, 200)
+
+        # 3. Read back annotations for slide_01.jpg and verify people are in it
+        response = self.client.get('/api/annotation?path=slide_01.jpg')
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.data)
+        self.assertEqual(data['people'], ['Alice Smith', 'Bob Jones'])
+
+        # 4. Check api_people compiles unique sorted names
+        response = self.client.get('/api/people')
+        self.assertEqual(response.status_code, 200)
+        people = json.loads(response.data)
+        
+        # Expected list should be unique, sorted alphabetically: ['Alice Smith', 'Bob Jones', 'Charlie Brown']
+        self.assertEqual(people, ['Alice Smith', 'Bob Jones', 'Charlie Brown'])
+
 if __name__ == '__main__':
     unittest.main()

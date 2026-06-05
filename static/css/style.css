@@ -999,3 +999,71 @@ kbd {
     display: inline-block;
     margin-right: 6px;
 }
+
+/* People Tagging and Autocomplete */
+.people-chip {
+    background: rgba(127, 90, 240, 0.12);
+    border: 1px solid rgba(127, 90, 240, 0.35);
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 500;
+    color: #c9baff;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    animation: tagSpawn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.people-chip i {
+    cursor: pointer;
+    font-size: 9px;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.people-chip i:hover {
+    opacity: 1;
+    color: var(--color-error);
+}
+
+.autocomplete-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.autocomplete-items {
+    position: absolute;
+    border: 1px solid var(--border-color);
+    border-top: none;
+    z-index: 999;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: 150px;
+    overflow-y: auto;
+    border-radius: 0 0 8px 8px;
+    background: rgba(15, 17, 26, 0.95);
+    backdrop-filter: var(--glass-blur);
+    box-shadow: var(--shadow-premium);
+    margin-top: 4px;
+}
+
+.autocomplete-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--text-primary);
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.autocomplete-item:hover, .autocomplete-item.active {
+    background-color: rgba(127, 90, 240, 0.2);
+    color: #ffffff;
+}
+
+.autocomplete-item strong {
+    color: var(--color-primary);
+    font-weight: 600;
+}
+

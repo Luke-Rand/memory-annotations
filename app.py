@@ -309,6 +309,7 @@ def api_annotation():
                 with open(sidecar_path, 'r', encoding='utf-8') as f:
                     data = json.load(f)
                 data.setdefault('ai_features', [])
+                data.setdefault('people', [])
                 return jsonify(data)
             except Exception as e:
                 return jsonify({'error': f"Failed to read sidecar: {str(e)}"}), 500
@@ -320,6 +321,7 @@ def api_annotation():
                 'location': '',
                 'description': '',
                 'tags': [],
+                'people': [],
                 'custom': {},
                 'ai_features': []
             })
@@ -334,6 +336,7 @@ def api_annotation():
             'location': data.get('location', '').strip(),
             'description': data.get('description', '').strip(),
             'tags': [t.strip() for t in data.get('tags', []) if t.strip()],
+            'people': [p.strip() for p in data.get('people', []) if p.strip()],
             'custom': data.get('custom', {}),
             'ai_features': data.get('ai_features', []),
             'annotated_at': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
@@ -345,6 +348,33 @@ def api_annotation():
             return jsonify({'success': True})
         except Exception as e:
             return jsonify({'error': f"Failed to save sidecar: {str(e)}"}), 500
+
+
+@app.route('/api/people', methods=['GET'])
+def api_people():
+    target_dir = config['target_directory']
+    if not target_dir or not os.path.isdir(target_dir):
+        return jsonify([])
+    
+    people_set = set()
+    try:
+        for entry in os.scandir(target_dir):
+            if entry.is_file() and entry.name.endswith('.json'):
+                if entry.name == 'config.json':
+                    continue
+                try:
+                    with open(entry.path, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                        people = data.get('people', [])
+                        if isinstance(people, list):
+                            for p in people:
+                                if isinstance(p, str) and p.strip():
+                                    people_set.add(p.strip())
+                except Exception:
+                    pass
+        return jsonify(sorted(list(people_set)))
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/analyze', methods=['POST'])
