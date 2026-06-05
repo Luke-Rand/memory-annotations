@@ -2,11 +2,13 @@
 let appConfig = {
     target_directory: '',
     mode: 'scan',
-    has_rawpy: false
+    has_rawpy: false,
+    has_ml: false
 };
 let imagesList = [];
 let activeImageIndex = -1;
 let currentTags = [];
+let aiFeatures = [];
 let isFormDirty = false;
 let hotFolderLastId = 0;
 let pollingActive = false;
@@ -40,6 +42,12 @@ const btnAddCustomField = document.getElementById('btn-add-custom-field');
 const btnReset = document.getElementById('btn-reset');
 const btnSave = document.getElementById('btn-save');
 const toastContainer = document.getElementById('toast-container');
+
+// ML Elements
+const aiFeaturesBox = document.getElementById('ai-features-box');
+const btnApplyAiTags = document.getElementById('btn-apply-ai-tags');
+const aiFeaturesChips = document.getElementById('ai-features-chips');
+const btnRunMl = document.getElementById('btn-run-ml');
 
 // Startup Initialization
 document.addEventListener('DOMContentLoaded', () => {
@@ -109,6 +117,12 @@ async function loadConfig() {
         
         if (!appConfig.has_rawpy) {
             showToast('RAW Support Muted', 'rawpy is not installed on this system. Canon CR3 images cannot be loaded or processed.', 'warning');
+        }
+        
+        if (appConfig.has_ml) {
+            aiFeaturesBox.classList.remove('hidden');
+        } else {
+            aiFeaturesBox.classList.add('hidden');
         }
         
         if (appConfig.target_directory) {
@@ -284,6 +298,7 @@ async function selectImage(index) {
     
     activeImageIndex = index;
     isFormDirty = false;
+    aiFeatures = [];
     
     // Highlight item in sidebar
     const items = imageListContainer.querySelectorAll('.image-item');
@@ -353,6 +368,10 @@ function populateForm(meta, isAnnotated) {
         addCustomFieldRow(key, value);
     });
     
+    // Set AI features
+    aiFeatures = meta.ai_features || [];
+    renderAiFeatures();
+    
     setFormDirtyState(false);
     updateStatusIndicator(isAnnotated);
 }
@@ -367,6 +386,13 @@ function enableForm() {
     btnAddCustomField.disabled = false;
     btnReset.disabled = false;
     btnSave.disabled = false;
+    
+    if (appConfig.has_ml) {
+        btnRunMl.disabled = false;
+        if (aiFeatures.length > 0) {
+            btnApplyAiTags.disabled = false;
+        }
+    }
 }
 
 function disableForm() {
@@ -380,15 +406,51 @@ function disableForm() {
     btnReset.disabled = true;
     btnSave.disabled = true;
     
+    btnRunMl.disabled = true;
+    btnApplyAiTags.disabled = true;
+    
     inputSubject.value = '';
     inputDate.value = '';
     inputLocation.value = '';
     inputDescription.value = '';
     tagsContainer.innerHTML = '';
     customFieldsContainer.innerHTML = '';
+    aiFeaturesChips.innerHTML = '<span class="ai-placeholder-text">Click below to analyze image features.</span>';
+    aiFeatures = [];
     
     statusIndicator.className = 'status-indicator pending';
     statusIndicator.innerHTML = '<i class="fa-solid fa-circle-dot"></i> Unsaved';
+}
+
+// Render AI chips
+function renderAiFeatures() {
+    aiFeaturesChips.innerHTML = '';
+    
+    if (aiFeatures.length === 0) {
+        aiFeaturesChips.innerHTML = '<span class="ai-placeholder-text">Click below to analyze image features.</span>';
+        btnApplyAiTags.disabled = true;
+        return;
+    }
+    
+    btnApplyAiTags.disabled = false;
+    
+    aiFeatures.forEach(item => {
+        const chip = document.createElement('span');
+        chip.className = 'ai-chip';
+        chip.title = `Click to add "${item.feature}" (Confidence: ${item.confidence}%)`;
+        chip.innerHTML = `<i class="fa-solid fa-robot"></i> ${item.feature} (${Math.round(item.confidence)}%)`;
+        
+        chip.addEventListener('click', () => {
+            if (!currentTags.includes(item.feature)) {
+                currentTags.push(item.feature);
+                renderTags();
+                setFormDirtyState(true);
+                showToast('Tag Added', `Added AI tag: "${item.feature}"`, 'success');
+            }
+        });
+        
+        aiFeaturesChips.appendChild(chip);
+    });
 }
 
 function setFormDirtyState(dirty) {
@@ -474,7 +536,8 @@ async function saveAnnotations() {
         location: inputLocation.value,
         description: inputDescription.value,
         tags: currentTags,
-        custom: custom
+        custom: custom,
+        ai_features: aiFeatures
     };
     
     try {
@@ -555,6 +618,61 @@ function setupEventListeners() {
     btnAddCustomField.addEventListener('click', () => {
         addCustomFieldRow();
         setFormDirtyState(true);
+    });
+    
+    // AI run auto-detect event
+    btnRunMl.addEventListener('click', async () => {
+        if (activeImageIndex === -1) return;
+        const image = imagesList[activeImageIndex];
+        
+        btnRunMl.disabled = true;
+        const originalContent = btnRunMl.innerHTML;
+        btnRunMl.innerHTML = '<div class="spinner-small"></div> Analyzing...';
+        
+        try {
+            const res = await fetch(`/api/analyze?path=${encodeURIComponent(image.path)}`, {
+                method: 'POST'
+            });
+            const data = await res.json();
+            
+            if (res.ok && data.success) {
+                aiFeatures = data.features || [];
+                renderAiFeatures();
+                setFormDirtyState(true);
+                
+                if (aiFeatures.length > 0) {
+                    showToast('AI Analysis Complete', `Identified ${aiFeatures.length} features about the photo.`, 'success');
+                } else {
+                    showToast('AI Analysis Complete', 'No major features detected in the image.', 'info');
+                }
+            } else {
+                showToast('AI Detection Failed', data.error || 'Check dependency installations.', 'error');
+            }
+        } catch (err) {
+            showToast('Connection Error', 'Failed to communicate with AI endpoint.', 'error');
+        } finally {
+            btnRunMl.disabled = false;
+            btnRunMl.innerHTML = originalContent;
+        }
+    });
+    
+    // Apply all AI tags button
+    btnApplyAiTags.addEventListener('click', () => {
+        let addedCount = 0;
+        aiFeatures.forEach(item => {
+            if (!currentTags.includes(item.feature)) {
+                currentTags.push(item.feature);
+                addedCount++;
+            }
+        });
+        
+        if (addedCount > 0) {
+            renderTags();
+            setFormDirtyState(true);
+            showToast('AI Tags Applied', `Added ${addedCount} AI tags to the annotations list.`, 'success');
+        } else {
+            showToast('Already Applied', 'All AI features are already in your tag list.', 'info');
+        }
     });
     
     // Form Actions

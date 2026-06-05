@@ -1,3 +1,4 @@
 flask
 watchdog
 pillow
+rawpy

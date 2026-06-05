@@ -159,5 +159,58 @@ class BackendTestCase(unittest.TestCase):
         self.assertEqual(jpeg_meta['location'], 'Beach')
         self.assertEqual(jpeg_meta['tags'], ['raw'])
 
+    def test_ml_disabled_graceful_fallback(self):
+        """Test that the app reports ML status and falls back gracefully when ML is disabled or handles analyzer commands."""
+        # 1. Fetch config and check has_ml presence
+        response = self.client.get('/api/config')
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.data)
+        self.assertIn('has_ml', data)
+        
+        has_ml = data['has_ml']
+
+        # 2. Query /api/analyze and verify it returns a 400 error indicating ML is disabled ONLY if has_ml is False
+        response = self.client.post('/api/analyze?path=slide_01.jpg')
+        if not has_ml:
+            self.assertEqual(response.status_code, 400)
+            res_data = json.loads(response.data)
+            self.assertIn('error', res_data)
+            self.assertIn('ML analyzer is not enabled', res_data['error'])
+        else:
+            # If ML is enabled, querying /api/analyze on a dummy file slide_01.jpg (which contains text 'dummy_jpg_data')
+            # should try to process the image and fail because it's not a real image, yielding a 500 error or similar,
+            # but NOT a 400 'ML analyzer is not enabled' error.
+            self.assertNotEqual(response.status_code, 400)
+
+    def test_annotation_includes_ai_features(self):
+        """Test that ai_features are correctly serialized and deserialized in sidecars."""
+        payload = {
+            'subject': 'Mountain Climbing',
+            'date': '1995',
+            'location': 'Alps',
+            'description': 'AI features test',
+            'tags': ['alps'],
+            'custom': {},
+            'ai_features': [
+                {'feature': 'mountain', 'confidence': 94.2},
+                {'feature': 'snow', 'confidence': 88.5}
+            ]
+        }
+        
+        # Write
+        response = self.client.post('/api/annotation?path=slide_01.jpg', json=payload)
+        self.assertEqual(response.status_code, 200)
+        
+        # Read
+        response = self.client.get('/api/annotation?path=slide_01.jpg')
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.data)
+        
+        # Verify
+        self.assertIn('ai_features', data)
+        self.assertEqual(len(data['ai_features']), 2)
+        self.assertEqual(data['ai_features'][0]['feature'], 'mountain')
+        self.assertEqual(data['ai_features'][0]['confidence'], 94.2)
+
 if __name__ == '__main__':
     unittest.main()

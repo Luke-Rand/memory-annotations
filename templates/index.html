@@ -140,6 +140,24 @@
                     </div>
                 </div>
 
+                <!-- AI Features (Optional) -->
+                <div class="form-group ai-features-section hidden" id="ai-features-box">
+                    <div class="ai-features-header">
+                        <label><i class="fa-solid fa-robot"></i> AI Detected Features</label>
+                        <button type="button" id="btn-apply-ai-tags" class="btn-text" disabled>
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Add all to Tags
+                        </button>
+                    </div>
+                    <div id="ai-features-container" class="ai-features-container">
+                        <div id="ai-features-chips" class="ai-features-chips-box">
+                            <span class="ai-placeholder-text">Click below to analyze image features.</span>
+                        </div>
+                    </div>
+                    <button type="button" id="btn-run-ml" class="btn btn-secondary btn-ml-trigger" disabled>
+                        <i class="fa-solid fa-brain"></i> AI Auto-Detect Features
+                    </button>
+                </div>
+
                 <!-- Custom Fields -->
                 <div class="form-group custom-fields-section">
                     <div class="custom-fields-header">

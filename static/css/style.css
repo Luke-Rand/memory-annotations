@@ -904,3 +904,93 @@ kbd {
 .hidden {
     display: none !important;
 }
+
+/* AI Features Section (Optional) */
+.ai-features-section {
+    border-top: 1px solid var(--border-color);
+    padding-top: 15px;
+    margin-top: 5px;
+}
+
+.ai-features-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.ai-features-container {
+    background: rgba(15, 17, 26, 0.4);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 8px;
+    margin-bottom: 12px;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+}
+
+.ai-features-chips-box {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    width: 100%;
+}
+
+.ai-placeholder-text {
+    font-size: 11px;
+    font-style: italic;
+    color: var(--text-muted);
+}
+
+.ai-chip {
+    background: rgba(127, 90, 240, 0.08);
+    border: 1px solid rgba(127, 90, 240, 0.25);
+    border-radius: 6px;
+    padding: 3px 8px;
+    font-size: 11px;
+    font-weight: 500;
+    color: #bfaaff;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+}
+
+.ai-chip:hover {
+    background: rgba(127, 90, 240, 0.18);
+    border-color: rgba(127, 90, 240, 0.5);
+    transform: translateY(-1px);
+}
+
+.ai-chip i {
+    font-size: 9px;
+    color: var(--color-primary);
+}
+
+.btn-ml-trigger {
+    background: linear-gradient(135deg, var(--color-accent), #683cdb) !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(127, 90, 240, 0.2);
+    border: none;
+    font-size: 12px;
+    padding: 10px;
+}
+
+.btn-ml-trigger:hover:not(:disabled) {
+    box-shadow: 0 6px 16px rgba(127, 90, 240, 0.4);
+    transform: translateY(-1px);
+}
+
+.btn-ml-trigger .spinner-small {
+    width: 12px;
+    height: 12px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    border-top-color: #ffffff;
+    animation: spin 0.8s linear infinite;
+    display: inline-block;
+    margin-right: 6px;
+}

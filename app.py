@@ -10,6 +10,7 @@ from flask import Flask, request, jsonify, send_file, render_template
 from PIL import Image
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
+from ml_analyzer import analyzer
 
 # Try importing rawpy for CR3 raw files support
 try:
@@ -161,7 +162,8 @@ def api_config():
         return jsonify({
             'target_directory': config['target_directory'],
             'mode': config['mode'],
-            'has_rawpy': HAS_RAWPY
+            'has_rawpy': HAS_RAWPY,
+            'has_ml': analyzer.enabled
         })
     else:
         data = request.json or {}
@@ -306,6 +308,7 @@ def api_annotation():
             try:
                 with open(sidecar_path, 'r', encoding='utf-8') as f:
                     data = json.load(f)
+                data.setdefault('ai_features', [])
                 return jsonify(data)
             except Exception as e:
                 return jsonify({'error': f"Failed to read sidecar: {str(e)}"}), 500
@@ -317,7 +320,8 @@ def api_annotation():
                 'location': '',
                 'description': '',
                 'tags': [],
-                'custom': {}
+                'custom': {},
+                'ai_features': []
             })
     else:
         # Save sidecar metadata
@@ -331,6 +335,7 @@ def api_annotation():
             'description': data.get('description', '').strip(),
             'tags': [t.strip() for t in data.get('tags', []) if t.strip()],
             'custom': data.get('custom', {}),
+            'ai_features': data.get('ai_features', []),
             'annotated_at': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
         }
         
@@ -340,6 +345,54 @@ def api_annotation():
             return jsonify({'success': True})
         except Exception as e:
             return jsonify({'error': f"Failed to save sidecar: {str(e)}"}), 500
+
+
+@app.route('/api/analyze', methods=['POST'])
+def api_analyze():
+    rel_path = request.args.get('path', '')
+    target_dir = config['target_directory']
+    if not target_dir or not rel_path:
+        return jsonify({'error': 'Missing parameters'}), 400
+        
+    full_path = Path(target_dir) / rel_path
+    if not full_path.exists() or not full_path.is_file():
+        return jsonify({'error': 'File not found'}), 404
+        
+    if not analyzer.enabled:
+        return jsonify({'error': 'ML analyzer is not enabled. Please install PyTorch and Torchvision.'}), 400
+        
+    suffix = full_path.suffix.lower()
+    
+    try:
+        if suffix in ['.jpg', '.jpeg']:
+            features = analyzer.analyze(str(full_path))
+        elif suffix == '.cr3':
+            if not HAS_RAWPY:
+                return jsonify({'error': 'rawpy is not installed to read CR3 files.'}), 500
+            
+            cache_path = get_preview_cache_path(full_path)
+            if cache_path.exists():
+                features = analyzer.analyze(str(cache_path))
+            else:
+                # Extract preview or render to PIL and analyze
+                with rawpy.imread(str(full_path)) as raw:
+                    try:
+                        thumb = raw.extract_thumb()
+                        if thumb.format == rawpy.ThumbFormat.JPEG:
+                            features = analyzer.analyze(thumb.data)
+                        else:
+                            raise ValueError("Thumbnail not JPEG")
+                    except Exception:
+                        # Fallback to render
+                        rgb = raw.postprocess(use_camera_wb=True, half_size=True)
+                        img = Image.fromarray(rgb)
+                        features = analyzer.analyze(img)
+        else:
+            return jsonify({'error': 'Unsupported file format'}), 400
+            
+        return jsonify({'success': True, 'features': features})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/hotfolder/events', methods=['GET'])

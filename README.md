@@ -12,6 +12,7 @@ It serves a beautiful, high-fidelity dark-mode user interface locally in the bro
 - **Canon RAW (`.cr3`) Support**: Handles Canon raw files directly. It extracts embedded high-resolution JPEG previews instantly, or falls back to full RAW postprocessing (demosaicing) using `rawpy`.
 - **Intelligent Preview Cache**: Renders and caches RAW preview conversions in a local `.preview_cache/` directory to ensure subsequent image loads are virtually instantaneous.
 - **JSON Sidecar Standard**: Saves metadata (Subject, Date, Location, Description, custom tags, and custom key-value pairs) directly next to the original files as `<image_name>.json` to ensure your data stays permanently linked to your physical scans.
+- **Optional AI Auto-Detect (Machine Learning)**: Automatically identifies image elements using a lightweight PyTorch-based model. Detected elements appear as clickable tags that you can apply with one click. AI metadata is stored in its own `ai_features` list field in the sidecar.
 - **Modes**:
   - **Folder Scan**: Step sequentially through an existing directory of files one-by-one.
   - **Hot Folder**: Monitors a folder using `watchdog`. When a new slide copy is completed, a glowing toast notification pops up. Click it to immediately jump and annotate.
@@ -27,21 +28,43 @@ It serves a beautiful, high-fidelity dark-mode user interface locally in the bro
 ### Prerequisites
 
 - **Python**: Python 3.8 or higher.
-- **Package Manager**: `pip` (included with Python installation).
 
-*Note: For RAW (.cr3) file decoding, the app uses `rawpy` and `numpy` (already installed in the default system environment).*
-
-### Installation
+### Installation & Virtual Environment Setup
 
 1. Clone or download the repository into your workspace directory.
-2. Install the necessary packages:
+2. Create a Python virtual environment:
+   ```bash
+   python -m venv .venv
+   ```
+3. Activate the virtual environment:
+   - **Windows (PowerShell)**:
+     ```powershell
+     .venv\Scripts\Activate.ps1
+     ```
+   - **Windows (CMD)**:
+     ```cmd
+     .venv\Scripts\activate.bat
+     ```
+   - **macOS / Linux**:
+     ```bash
+     source .venv/bin/activate
+     ```
+4. Install the necessary packages inside your active virtual environment:
    ```bash
    pip install -r requirements.txt
    ```
 
+### Enabling Optional AI Features
+
+To unlock the optional AI image analysis and feature detection panel, install `torch` and `torchvision` inside your active virtual environment:
+```bash
+pip install torch torchvision
+```
+The app will automatically detect these packages, enable the AI panel, and download a lightweight `MobileNetV3` model (~10MB) on your first feature detection request.
+
 ### Running the App
 
-Start the application by running the following command in your terminal:
+With your virtual environment activated, start the application:
 ```bash
 python app.py
 ```
