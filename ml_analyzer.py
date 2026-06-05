@@ -88,14 +88,14 @@ class MLAnalyzer:
             with self.torch.no_grad():
                 outputs = self.model(**inputs)
                 logits_per_image = outputs.logits_per_image
-                # Sigmoid activation for independent multi-label probabilities
-                probs = logits_per_image.sigmoid().squeeze(0)
+                # Softmax over all text labels for stable relative scoring
+                probs = logits_per_image.softmax(dim=1).squeeze(0)
                 
             results = []
             for idx, prob_tensor in enumerate(probs):
                 prob = prob_tensor.item()
-                # 15% independent threshold for sigmoid filtering
-                if prob >= 0.15:
+                # 4% minimum threshold for softmax filtering across labels
+                if prob >= 0.04:
                     results.append({
                         'feature': labels[idx],
                         'confidence': round(prob * 100, 1)
