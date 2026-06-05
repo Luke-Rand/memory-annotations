@@ -127,5 +127,37 @@ class BackendTestCase(unittest.TestCase):
         jpg_item = next(img for img in images if img['name'] == 'slide_01.jpg')
         self.assertTrue(jpg_item['annotated'])
 
+    def test_raw_to_jpeg_sidecar_sharing(self):
+        """Test that a CR3 and JPG sharing the same base name share the same sidecar annotations."""
+        # 1. Write annotation for slide_02.cr3
+        payload = {
+            'subject': 'Shared Sunset',
+            'date': '2026-06-05',
+            'location': 'Beach',
+            'description': 'Taken on RAW',
+            'tags': ['raw'],
+            'custom': {}
+        }
+        response = self.client.post('/api/annotation?path=slide_02.cr3', json=payload)
+        self.assertEqual(response.status_code, 200)
+
+        # 2. Check that the sidecar file was created as slide_02.json (not slide_02.cr3.json)
+        sidecar_file = self.test_dir_path / "slide_02.json"
+        self.assertTrue(sidecar_file.exists())
+
+        # 3. Simulate editing to JPEG (creating slide_02.jpg in same dir)
+        jpeg_file = self.test_dir_path / "slide_02.jpg"
+        jpeg_file.write_text("dummy_jpg_data")
+
+        # 4. Fetch annotation for the new JPEG file (slide_02.jpg)
+        response = self.client.get('/api/annotation?path=slide_02.jpg')
+        self.assertEqual(response.status_code, 200)
+        jpeg_meta = json.loads(response.data)
+        
+        # Verify it picks up the same annotations written for the CR3 file
+        self.assertEqual(jpeg_meta['subject'], 'Shared Sunset')
+        self.assertEqual(jpeg_meta['location'], 'Beach')
+        self.assertEqual(jpeg_meta['tags'], ['raw'])
+
 if __name__ == '__main__':
     unittest.main()
