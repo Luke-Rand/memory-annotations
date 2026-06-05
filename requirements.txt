@@ -2,3 +2,6 @@ flask
 watchdog
 pillow
 rawpy
+transformers
+sentencepiece
+protobuf
